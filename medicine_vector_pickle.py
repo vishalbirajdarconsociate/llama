@@ -1,5 +1,5 @@
 """
-* * With Hugging Face Embeddings and pickle file (not recommended)
+* * With Hugging Face Embeddings and pickle file
 """
 
 

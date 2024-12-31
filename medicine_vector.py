@@ -1,3 +1,10 @@
+"""
+* * With Hugging Face Embeddings and pickle file (not recommended)
+"""
+
+
+
+
 import time
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
@@ -96,14 +103,16 @@ async def chat_endpoint(q: str | None = None):
     return {"response": response.content, "time_taken": time_taken}
 
 
-class Query(BaseModel):
-    query: str
-
-
-@app.get("/chat-get/")
-async def read_items(q: str | None = None):
+@app.get("/update-product-data/")
+async def update_product_data():
     start_time = time.time()
-    response = chatbot.invoke(q)
+    product_data = fetch_product_api_data()
+    if "Error fetching product data." in product_data:
+        return {"error": "Failed to fetch product data from API."}
+    create_vector_store(product_data)
     end_time = time.time()
     time_taken = end_time - start_time
-    return {"response": response.content, "time_taken": time_taken}
+    return {
+        "message": "Product data updated successfully.",
+        "time_taken_seconds": time_taken,
+    }
