@@ -1,3 +1,8 @@
+"""
+* * With Hugging Face Embeddings and pickle file (not recommended)
+"""
+
+
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS

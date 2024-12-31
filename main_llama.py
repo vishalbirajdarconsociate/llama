@@ -1,3 +1,7 @@
+"""
+* * With ollama embedings and no pickle file  
+"""
+
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
@@ -10,6 +14,7 @@ import pickle
 
 app = FastAPI()
 
+MODEL = "llama3.2:1b"
 
 def fetch_product_api_data():
     api_url = "http://62.72.56.145:5154/api/product_list/"
@@ -31,22 +36,22 @@ def fetch_product_api_data():
         return ["Error fetching product data."]
 
 
-def create_and_save_vector_store(product_data):
-    embedder = OllamaEmbeddings(model = "llama3.2:3b")
+
+
+def create_vector_store(product_data):
+    embedder = OllamaEmbeddings(model=MODEL)
     documents = [Document(page_content=desc) for desc in product_data]
     vector_store = FAISS.from_documents(documents, embedder)
-    with open("faiss_product_store.pkl", "wb") as f:
-        pickle.dump(vector_store, f)
-
-
-def load_vector_store():
-    with open("faiss_product_store.pkl", "rb") as f:
-        vector_store = pickle.load(f)
+    vector_store.save_local("faiss_product_store")
     return vector_store
 
 
 def fetch_relevant_product_data(query):
-    vector_store = load_vector_store()
+    vector_store = FAISS.load_local(
+        "faiss_product_store",
+        OllamaEmbeddings(model=MODEL),
+        allow_dangerous_deserialization=True
+    )
     retriever = vector_store.as_retriever()
     relevant_docs = retriever.invoke(query)
     return "\n".join([doc.page_content for doc in relevant_docs])
@@ -77,14 +82,15 @@ Now, provide a response to the query:
         input_variables=["context", "query"], template=prompt_template
     )
     llm = ChatOllama(
-        model = "llama3.2:3b",
+        model = MODEL ,
         temperature=0,
     )
     return prompt | llm
 
 
 product_data = fetch_product_api_data()
-create_and_save_vector_store(product_data)
+vector_store = create_vector_store(product_data)
+
 chatbot = train_chatbot_llama()
 
 
@@ -103,7 +109,7 @@ async def update_product_data():
     product_data = fetch_product_api_data()
     if "Error fetching product data." in product_data:
         return {"error": "Failed to fetch product data from API."}
-    create_and_save_vector_store(product_data)
+    create_vector_store(product_data)
     end_time = time.time()
     time_taken = end_time - start_time
     return {
