@@ -4,7 +4,7 @@
 
 
 
-
+import pandas as pd
 import time
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
@@ -36,6 +36,39 @@ def fetch_product_api_data():
         return data
     except requests.exceptions.RequestException as e:
         return ["Error fetching product data."]
+
+def fetch_product_csv_data(file_path):
+    try:
+        df = pd.read_csv(file_path)
+        required_columns = [
+            "Medicine Name", "Composition", "Uses", "Side_effects", 
+            "Image URL", "Manufacturer", "Excellent Review %", 
+            "Average Review %", "Poor Review %"
+        ]
+        if not all(col in df.columns for col in required_columns):
+            raise ValueError("CSV file is missing one or more required columns.")
+        data = []
+        for _, row in df.iterrows():
+            medicine_name = row["Medicine Name"]
+            composition = row["Composition"]
+            uses = row["Uses"]
+            side_effects = row["Side_effects"]
+            manufacturer = row["Manufacturer"]
+            reviews = f"Excellent: {row['Excellent Review %']}%, Average: {row['Average Review %']}%, Poor: {row['Poor Review %']}%"
+            formatted = (
+                f"Medicine Name: {medicine_name}, Composition: {composition}, "
+                f"Uses: {uses}, Side Effects: {side_effects}, Manufacturer: {manufacturer}, "
+                f"Reviews: {reviews}"
+            )
+            print(formatted)
+            data.append(formatted)
+        return data
+    except FileNotFoundError:
+        return ["Error: CSV file not found."]
+    except ValueError as ve:
+        return [f"Error: {str(ve)}"]
+    except Exception as e:
+        return [f"Error: {str(e)}"]
 
 
 
@@ -87,7 +120,8 @@ Now, provide a response to the query:
     return prompt | llm
 
 
-product_data = fetch_product_api_data()
+# product_data = fetch_product_api_data()
+product_data = fetch_product_csv_data("/home/vishal/Desktop/opencv/chatbot/llama/Medicine_Details.csv")
 vector_store = create_vector_store(product_data)
 chatbot = train_chatbot_llama()
 

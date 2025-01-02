@@ -42,13 +42,13 @@ def create_vector_store(product_data):
     embedder = OllamaEmbeddings(model=MODEL)
     documents = [Document(page_content=desc) for desc in product_data]
     vector_store = FAISS.from_documents(documents, embedder)
-    vector_store.save_local("faiss_product_store")
+    vector_store.save_local("faiss_product_store_llama")
     return vector_store
 
 
 def fetch_relevant_product_data(query):
     vector_store = FAISS.load_local(
-        "faiss_product_store",
+        "faiss_product_store_llama",
         OllamaEmbeddings(model=MODEL),
         allow_dangerous_deserialization=True
     )
