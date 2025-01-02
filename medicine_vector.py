@@ -32,7 +32,6 @@ def fetch_product_api_data():
             price = product.get("uom_list", [{"sales_price": "N/A"}])[0]["sales_price"]
             cat = product.get("category", "Unknown")
             data.append(f"Product Name: {name}, Price: ${price}, Category: {cat}")
-        print(data)
         return data
     except requests.exceptions.RequestException as e:
         return ["Error fetching product data."]
