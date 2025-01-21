@@ -14,9 +14,17 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 import requests
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace "*" with specific origins for more security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def fetch_product_api_data():
     api_url = "http://62.72.56.145:5154/api/product_list/"
