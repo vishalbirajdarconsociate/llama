@@ -4,7 +4,6 @@
 
 
 
-
 import time
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
@@ -14,6 +13,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 import requests
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI()
 

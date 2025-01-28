@@ -12,6 +12,8 @@ from langchain.docstore.document import Document
 import requests
 import time
 import pickle
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI()
 
