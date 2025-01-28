@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
 from langchain.docstore.document import Document
 import requests
 import time
@@ -79,10 +79,10 @@ Guidelines:
 Now, provide a response to the query:
     """
     prompt = PromptTemplate(input_variables=["context", "query"], template=prompt_template)
-    llm = ChatOllama(
-        model="llama3.2:1b",
-        temperature=0,
-    )
+    llm = ChatGroq(
+    model_name="llama-3.3-70b-versatile",
+    temperature=0.7
+)
     return prompt | llm
 
 

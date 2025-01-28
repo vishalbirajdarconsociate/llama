@@ -1,45 +1,68 @@
 """
-* * With ollama embedings and no pickle file  
+* * With Hugging Face Embeddings and pickle file (not recommended)
 """
 
+
+
+import pandas as pd
+import time
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import ChatOllama
-from langchain_ollama import OllamaEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 import requests
-import time
-import pickle
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-MODEL = "llama3.2:1b"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-def fetch_product_api_data():
-    api_url = "http://62.72.56.145:5154/api/product_list/"
+def fetch_product_csv_data(file_path):
     try:
-        payload = {"jsonrpc": "2.0", "params": {"page_no": 1, "page_size": 200}}
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(api_url, json=payload, headers=headers)
-        response.raise_for_status()
-        products = response.json()
+        df = pd.read_csv(file_path)
+        required_columns = [
+            "Medicine Name", "Composition", "Uses", "Side_effects", 
+            "Image URL", "Manufacturer", "Excellent Review %", 
+            "Average Review %", "Poor Review %"
+        ]
+        if not all(col in df.columns for col in required_columns):
+            raise ValueError("CSV file is missing one or more required columns.")
         data = []
-        for product in products["result"]["products"]:
-            name = product.get("name", "Unknown").replace("\n", "")
-            price = product.get("uom_list", [{"sales_price": "N/A"}])[0]["sales_price"]
-            cat = product.get("category", "Unknown")
-            print(f"Product Name: {name}, Price: ${price}, Category: {cat}")
-            data.append(f"Product Name: {name}, Price: ${price}, Category: {cat}")
+        for _, row in df.iterrows():
+            medicine_name = row["Medicine Name"]
+            composition = row["Composition"]
+            uses = row["Uses"]
+            side_effects = row["Side_effects"]
+            manufacturer = row["Manufacturer"]
+            reviews = f"Excellent: {row['Excellent Review %']}%, Average: {row['Average Review %']}%, Poor: {row['Poor Review %']}%"
+            formatted = (
+                f"Medicine Name: {medicine_name}, Composition: {composition}, "
+                f"Uses: {uses}, Side Effects: {side_effects}, Manufacturer: {manufacturer}, "
+                f"Reviews: {reviews}"
+            )
+            print(formatted)
+            data.append(formatted)
         return data
-    except requests.exceptions.RequestException as e:
-        return ["Error fetching product data."]
-
+    except FileNotFoundError:
+        return ["Error: CSV file not found."]
+    except ValueError as ve:
+        return [f"Error: {str(ve)}"]
+    except Exception as e:
+        return [f"Error: {str(e)}"]
 
 
 
 def create_vector_store(product_data):
-    embedder = OllamaEmbeddings(model=MODEL)
+    embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     documents = [Document(page_content=desc) for desc in product_data]
     vector_store = FAISS.from_documents(documents, embedder)
     vector_store.save_local("faiss_product_store")
@@ -49,7 +72,7 @@ def create_vector_store(product_data):
 def fetch_relevant_product_data(query):
     vector_store = FAISS.load_local(
         "faiss_product_store",
-        OllamaEmbeddings(model=MODEL),
+        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"),
         allow_dangerous_deserialization=True
     )
     retriever = vector_store.as_retriever()
@@ -78,29 +101,28 @@ Guidelines:
 
 Now, provide a response to the query:
     """
-    prompt = PromptTemplate(
-        input_variables=["context", "query"], template=prompt_template
-    )
+    prompt = PromptTemplate(input_variables=["context", "query"], template=prompt_template)
     llm = ChatOllama(
-        model = MODEL ,
+        model="llama3.2:1b",
         temperature=0,
     )
     return prompt | llm
 
 
-product_data = fetch_product_api_data()
+product_data = fetch_product_csv_data("/home/vishal/Desktop/opencv/chatbot/llama/Medicine_Details.csv")
 vector_store = create_vector_store(product_data)
-
 chatbot = train_chatbot_llama()
 
 
 @app.get("/chat/")
-async def chat_endpoint(q: str):
+async def chat_endpoint(q: str | None = None):
     start_time = time.time()
+
     relevant_data = fetch_relevant_product_data(q)
     response = chatbot.invoke({"context": relevant_data, "query": q})
     end_time = time.time()
-    return {"response": response.content, "time_taken_seconds": end_time - start_time}
+    time_taken = end_time - start_time
+    return {"response": response.content, "time_taken": time_taken}
 
 
 @app.get("/update-product-data/")
