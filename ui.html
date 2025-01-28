@@ -35,8 +35,12 @@
     <script>
         async function sendToApi() {
             const inputText = document.getElementById('inputText').value;
+            const sendButton = document.getElementById('sendButton');
             console.log(inputText);
             const apiUrl = `http://127.0.0.1:8000/chat/?q=${encodeURIComponent(inputText)}`;
+
+            sendButton.disabled = true;
+            sendButton.textContent = "Loading...";
 
             try {
                 const response = await fetch(apiUrl);
@@ -47,6 +51,10 @@
                 displayResponse(inputText, data.response, data.time_taken);
             } catch (error) {
                 displayResponse(inputText, `Error: ${error.message}`, "N/A");
+            } finally {
+                // Re-enable the button and restore its text
+                sendButton.disabled = false;
+                sendButton.textContent = "Send";
             }
         }
 
