@@ -9,11 +9,9 @@ import time
 from fastapi import FastAPI
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
-from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
-import requests
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -65,13 +63,13 @@ def create_vector_store(product_data):
     embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     documents = [Document(page_content=desc) for desc in product_data]
     vector_store = FAISS.from_documents(documents, embedder)
-    vector_store.save_local("faiss_product_store")
+    vector_store.save_local("faiss_kaggle_product_store")
     return vector_store
 
 
 def fetch_relevant_product_data(query):
     vector_store = FAISS.load_local(
-        "faiss_product_store",
+        "faiss_kaggle_product_store",
         HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"),
         allow_dangerous_deserialization=True
     )
@@ -102,9 +100,9 @@ Guidelines:
 Now, provide a response to the query:
     """
     prompt = PromptTemplate(input_variables=["context", "query"], template=prompt_template)
-    llm = ChatOllama(
-        model="llama3.2:1b",
-        temperature=0,
+    llm = ChatGroq(
+    model_name="llama-3.3-70b-versatile",
+    temperature=0.7
     )
     return prompt | llm
 
@@ -128,7 +126,7 @@ async def chat_endpoint(q: str | None = None):
 @app.get("/update-product-data/")
 async def update_product_data():
     start_time = time.time()
-    product_data = fetch_product_api_data()
+    product_data = fetch_product_csv_data("/home/vishal/Desktop/opencv/chatbot/llama/Medicine_Details.csv")
     if "Error fetching product data." in product_data:
         return {"error": "Failed to fetch product data from API."}
     create_vector_store(product_data)
