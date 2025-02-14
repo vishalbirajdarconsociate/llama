@@ -11,7 +11,7 @@
             "request": "launch",
             "module": "uvicorn",
             "args": [
-                "main_llama:app",
+                "medicine_deepseek_vector:app",
                 "--reload"
             ],
             "jinja": true
