@@ -1,7 +1,11 @@
+"""
+* * Without embedings and no pickle file  
+"""
+
+
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
-from sqlalchemy import create_engine, text
 from langchain_ollama import ChatOllama
 
 app = FastAPI()
@@ -9,25 +13,40 @@ app = FastAPI()
 import requests
 
 
-def fetch_product_api_data():
-    api_url = "http://62.72.56.145:5154/api/product_list/"
+
+def fetch_product_csv_data(file_path):
     try:
-        payload = {"jsonrpc": "2.0", "params": {"page_no": 1, "page_size": 200}}
-        headers = {
-            "Content-Type": "application/json",
-        }
-        response = requests.post(api_url, json=payload, headers=headers)
-        response.raise_for_status()
-        products = response.json()
-        data = ""
-        for product in products["result"]["products"]:
-            name = product.get("name", "Unknown").replace("\n", "")
-            price = product.get("uom_list", 0)[0]["sales_price"]
-            cat = product.get("category", "Unknown")
-            data += f"Product Name: {name}, Price: ${price}, Category: {cat};\n"
+        df = pd.read_csv(file_path)
+        required_columns = [
+            "Medicine Name", "Composition", "Uses", "Side_effects", 
+            "Image URL", "Manufacturer", "Excellent Review %", 
+            "Average Review %", "Poor Review %"
+        ]
+        if not all(col in df.columns for col in required_columns):
+            raise ValueError("CSV file is missing one or more required columns.")
+        data = []
+        for _, row in df.iterrows():
+            medicine_name = row["Medicine Name"]
+            composition = row["Composition"]
+            uses = row["Uses"]
+            side_effects = row["Side_effects"]
+            manufacturer = row["Manufacturer"]
+            reviews = f"Excellent: {row['Excellent Review %']}%, Average: {row['Average Review %']}%, Poor: {row['Poor Review %']}%"
+            formatted = (
+                f"Medicine Name: {medicine_name}, Composition: {composition}, "
+                f"Uses: {uses}, Side Effects: {side_effects}, Manufacturer: {manufacturer}, "
+                f"Reviews: {reviews}"
+            )
+            print(formatted)
+            data.append(formatted)
         return data
-    except requests.exceptions.RequestException as e:
-        return "Error fetching product data."
+    except FileNotFoundError:
+        return ["Error: CSV file not found."]
+    except ValueError as ve:
+        return [f"Error: {str(ve)}"]
+    except Exception as e:
+        return [f"Error: {str(e)}"]
+
 
 
 def train_chatbot_llama(product_data):
@@ -62,7 +81,7 @@ Now, provide a response to the query:
     return chain
 
 
-product_data = fetch_product_api_data()
+product_data = fetch_product_csv_data("/home/vishal/Desktop/opencv/chatbot/llama/Medicine_Details.csv")
 chatbot = train_chatbot_llama(product_data)
 
 
