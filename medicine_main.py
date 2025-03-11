@@ -2,7 +2,7 @@
 * * Without embedings and no pickle file  
 """
 
-
+import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
